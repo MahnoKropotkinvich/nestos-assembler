@@ -1,0 +1,45 @@
+name: Example Build Workflow
+on:
+  push:
+jobs:
+  build:
+    name: Build NestOS image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y podman xz-utils curl qemu-user-static
+
+      - name: Build nosa image
+        run: ./bootstrap.sh -r podman -a riscv64
+
+      - name: Use nosa to build NestOS image
+        run: |
+          cat << EOF > nosa
+          #!/bin/bash
+          podman run --rm  -it --security-opt label=disable --privileged --user=root \
+          -v ${PWD}:/srv/ --device /dev/kvm --device /dev/fuse --network=host \
+          --tmpfs /tmp -v /var/tmp:/var/tmp   -v /etc/pki/ca-trust/:/etc/pki/ca-trust/:ro \
+          ${COREOS_ASSEMBLER_CONFIG_GIT:+-v $COREOS_ASSEMBLER_CONFIG_GIT:/srv/src/config/:Z,ro} \
+          ${COREOS_ASSEMBLER_GIT:+-v $COREOS_ASSEMBLER_GIT/src/:/usr/lib/coreos-assembler/:Z,ro} \
+          ${COREOS_ASSEMBLER_CONTAINER_RUNTIME_ARGS} \
+          ${COREOS_ASSEMBLER_CONTAINER:-localhost/nestos-assembler} "$@"
+          EOF
+          chmod +x nosa
+          mkdir out
+          cd out
+          ../nosa init --branch v1.0-riscv https://gitee.com/MahnoKropotkinov/nestos-config.git
+          ../nosa fetch
+          ../nosa build
+          ../nosa buildextend-metal
+          ../nosa buildextend-metal4k
+          ../nosa buildextend-live
+
+      - name: Uploard build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: images
+          path: out/builds/24.03-LTS-*/riscv64/nestos-24.03-LTS*

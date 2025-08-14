@@ -26,7 +26,7 @@ make git rpm-build
 guestfs-tools libguestfs virtiofsd /usr/bin/qemu-img qemu-kvm swtpm
 # And the main arch emulators for cross-arch testing
 # qemu-system-aarch64-core qemu-system-ppc-core qemu-system-s390x-core qemu-system-x86-core
-qemu-system-aarch64 qemu-system-x86_64
+qemu-system-aarch64 qemu-system-x86_64 qemu-system-riscv
 # cross-arch emulators need these,but openEuler did not provide these packages in every repo currently.
 # edk2-ovmf edk2-aarch64
 
